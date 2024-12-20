@@ -1,0 +1,35 @@
+# Common Git configurations applied to all profiles
+[common]
+core.editor = "vim"         # Gitprofile will remove this comments, only `""` is being used.
+core.autocrlf = "input"
+init.defaultBranch = "main"
+pull.rebase = true
+fetch.prune = true
+merge.ff = "only"
+pull.ff = "only"
+
+# Useful git aliases
+alias.lg = "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+alias.st = "status -sb"
+alias.co = "checkout"
+alias.br = "branch"
+
+# Work profile
+[work]
+user.name = "John Doe"
+user.email = "john.doe@company.com"
+user.signingkey = "YOUR_SIGNING_KEY"
+commit.gpgsign = true
+
+# Personal profile
+[personal]
+user.name = "John Doe"
+user.email = "john.personal@gmail.com"
+user.signingkey = "YOUR_PERSONAL_SIGNING_KEY"
+
+
+# Open source profile
+[opensource]
+user.name = "John Doe"
+user.email = "john.opensource@gmail.com"
+commit.gpgsign = true
