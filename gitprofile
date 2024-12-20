@@ -1,0 +1,115 @@
+#!/bin/sh
+
+#
+# gitprofile - Git Profile Manager
+# 
+# A command-line utility that helps you easily switch between different Git configurations.
+# Useful for managing multiple Git identities (e.g., work, personal, open source)
+# without manually changing Git configurations each time.
+#
+# This script allows you to:
+# - Switch between predefined Git profiles
+# - Maintain separate email addresses and usernames for different contexts
+# - Keep your Git commits properly attributed across different projects
+
+profile_name=""
+config_file="$HOME/.config/gitprofile.toml"
+global_option="--local"
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    -c|--config)
+      config_file="$2"
+      shift 2
+      ;;
+    -g|--global)
+      global_option="--global"
+      shift
+      ;;
+    -h|--help)
+      echo "Usage: gitprofile <profile_name> [-c|--config <config_file>] [-g|--global]"
+      echo "Switch between different git profiles"
+      echo "Options:"
+      echo "  -c, --config <config_file>  Override the default config file path"
+      echo "  -g, --global                Set git config globally"
+      exit 0
+      ;;
+    -v|--version)
+      echo "gitprofile 1.0.1"
+      exit 0
+      ;;
+    -*)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+    *)
+      if [ -z "$profile_name" ]; then
+        profile_name="$1"
+      else
+        echo "Error: Multiple profile names provided"
+        exit 1
+      fi
+      shift
+      ;;
+  esac
+done
+# Check if terminal supports colors
+if [ -t 1 ] && tput colors >/dev/null 2>&1; then
+  COLOR_GREEN="\033[92m"
+  COLOR_BLUE="\033[34m"
+  COLOR_RED="\033[91m"
+  COLOR_GRAY="\033[90m"
+  COLOR_RESET="\033[0m"
+else
+  COLOR_GREEN=""
+  COLOR_BLUE=""
+  COLOR_RED=""
+  COLOR_GRAY=""
+  COLOR_RESET=""
+fi
+
+if [ -z "$profile_name" ]; then
+  echo "Profile name not provided. Please provide a profile name."
+  exit 1
+fi
+
+if [ ! -f "$config_file" ]; then
+  touch "$config_file"
+fi
+
+[ "$global_option" = "--global" ] && printf "${COLOR_GREEN}Setting git config globally${COLOR_RESET}\n"
+
+if command -v gsed >/dev/null 2>&1; then
+  config=$(gsed -n "/^\[$profile_name\]/,/^\[/p" "$config_file" | gsed '/^\[/d')
+else
+  config=$(sed -n "/^\[$profile_name\]/,/^\[/p" "$config_file" | sed '/^\[/d')
+fi
+
+if [ -z "$config" ]; then
+  echo "Profile not found. Please add the profile to $config_file"
+  exit 1
+fi
+
+printf "${COLOR_GRAY}Loading profile %s from %s${COLOR_RESET}\n" "$profile_name" "$config_file"
+
+echo "$config" | while IFS= read -r line; do
+  # Skip empty and # prefixed lines
+  case "$line" in
+    ''|'#'*) continue ;;
+  esac
+  
+  key=$(echo "${line%%=*}" | xargs)
+  value=$(echo "${line#*=}" | sed 's/#.*$//' | xargs | sed 's/^"\(.*\)"$/\1/')
+  
+  display_key=$key
+  display_value=$value
+  if [ ${#key} -gt 25 ]; then
+    display_key=$(echo "$key" | cut -c 1-25)"..."
+  fi
+  if [ ${#value} -gt 25 ]; then
+    display_value=$(echo "$value" | cut -c 1-25)"..."
+  fi
+  
+  printf "Set ${COLOR_BLUE}%s${COLOR_RESET} ${COLOR_GRAY}as${COLOR_RESET} ${COLOR_GREEN}%s${COLOR_RESET}\n" "$display_key" "$display_value"
+  git config $global_option "$key" "$value"
+done
